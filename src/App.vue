@@ -1,12 +1,24 @@
 <script setup>
-import { onMounted, ref, watch, reactive } from 'vue'
+import { onMounted, ref, watch, reactive, provide } from 'vue'
 import axios from 'axios'
 
 import Header from './components/Header.vue'
 import CardList from './components/CardList.vue'
-// import Drawer from './components/Drawer.vue'
+import Drawer from './components/Drawer.vue'
 
 const items = ref([])
+const cart = ref([])
+
+const drawerOpen = ref(false)
+
+const closeDrawer = () => {
+  drawerOpen.value = false
+}
+
+const openDrawer = () => {
+  drawerOpen.value = true
+}
+
 const filters = reactive({
   sortBy: 'title',
   searchQuery: ''
@@ -28,13 +40,24 @@ const addTofavorites = async (item) => {
       }
       const { data } = await axios.post('https://1af91ffe6c154bf5.mokky.dev/favorites', obj)
       item.isFavorite = true
-			item.favoriteId = data.id
+      item.favoriteId = data.id
     } else {
-			await axios.delete(`https://1af91ffe6c154bf5.mokky.dev/favorites/${item.favoriteId}`)
-			item.isFavorite = false
-		}
+      await axios.delete(`https://1af91ffe6c154bf5.mokky.dev/favorites/${item.favoriteId}`)
+      item.isFavorite = false
+      item.favoriteId = null
+    }
   } catch (e) {
     console.log(e)
+  }
+}
+
+const addToCart = (item) => {
+  if (!item.isAdded) {
+		item.isAdded = true
+    cart.value.push(item)
+  } else {
+    cart.value.splice(cart.value.indexOf(item), 1)
+		item.isAdded = false
   }
 }
 
@@ -68,7 +91,12 @@ const fetchItems = async () => {
     const { data } = await axios.get('https://1af91ffe6c154bf5.mokky.dev/items', {
       params
     })
-    items.value = data.map((obj) => ({ ...obj, isFavorite: false, isAdded: false }))
+    items.value = data.map((obj) => ({
+      ...obj,
+      isFavorite: false,
+      isAdded: false,
+      favoriteId: null
+    }))
   } catch (e) {
     console.log(e)
   }
@@ -80,12 +108,14 @@ onMounted(async () => {
 })
 
 watch(filters, fetchItems)
+
+provide('cartActions', { closeDrawer, openDrawer })
 </script>
 
 <template>
-  <!-- <Drawer /> -->
+  <Drawer v-if="drawerOpen" />
   <main class="w-4/5 m-auto bg-white rounded-xl shadow-xl mt-14">
-    <Header />
+    <Header @open-drawer="openDrawer" />
     <section class="p-10">
       <div class="flex justify-between items-center">
         <h2 class="text-3xl font-bold mb-8">Все кроссовки</h2>
@@ -106,7 +136,12 @@ watch(filters, fetchItems)
           </div>
         </div>
       </div>
-      <CardList :items="items" class="mt-3" @addToFavorites="addTofavorites" />
+      <CardList
+        :items="items"
+        class="mt-3"
+        @add-to-favorites="addTofavorites"
+        @add-to-cart="addToCart"
+      />
     </section>
   </main>
 </template>

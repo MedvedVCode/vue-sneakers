@@ -1,14 +1,11 @@
 <script setup>
 import Card from './Card.vue'
 
-const emit = defineEmits(['addToFavorites'])
+const emit = defineEmits(['addToFavorites', 'addToCart'])
 
 defineProps({
   items: Array
 })
-const onClickAdd = () => {
-  alert('Добавлено')
-}
 </script>
 
 <template>
@@ -20,9 +17,10 @@ const onClickAdd = () => {
       :image-url="item.imageUrl"
       :title="item.title"
       :price="item.price"
-      :onClickAdd="onClickAdd"
+      :onClickAdd="() => emit('addToCart', item)"
       :onClickFavorite="() => emit('addToFavorites', item)"
       :is-favorite="item.isFavorite"
+			:is-added="item.isAdded"
     />
   </div>
 </template>
