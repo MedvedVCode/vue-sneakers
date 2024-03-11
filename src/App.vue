@@ -1,5 +1,5 @@
 <script setup>
-import { onMounted, ref, watch, reactive, provide } from 'vue'
+import { onMounted, ref, watch, reactive, provide, computed } from 'vue'
 import axios from 'axios'
 
 import Header from './components/Header.vue'
@@ -8,6 +8,9 @@ import Drawer from './components/Drawer.vue'
 
 const items = ref([])
 const cart = ref([])
+
+const totalPrice = computed(() => cart.value.reduce((sum, item) => sum + item.price, 0))
+const vatPrice = computed(() => Math.round(totalPrice.value * 5) / 100)
 
 const drawerOpen = ref(false)
 
@@ -52,12 +55,20 @@ const addTofavorites = async (item) => {
 }
 
 const addToCart = (item) => {
+  item.isAdded = true
+  cart.value.push(item)
+}
+
+const removeFromCart = (item) => {
+  cart.value.splice(cart.value.indexOf(item), 1)
+  item.isAdded = false
+}
+
+const onClickAddPlus = (item) => {
   if (!item.isAdded) {
-		item.isAdded = true
-    cart.value.push(item)
+    addToCart(item)
   } else {
-    cart.value.splice(cart.value.indexOf(item), 1)
-		item.isAdded = false
+    removeFromCart(item)
   }
 }
 
@@ -109,13 +120,13 @@ onMounted(async () => {
 
 watch(filters, fetchItems)
 
-provide('cartActions', { closeDrawer, openDrawer })
+provide('cart', { closeDrawer, openDrawer, cart, addToCart, removeFromCart })
 </script>
 
 <template>
-  <Drawer v-if="drawerOpen" />
+  <Drawer v-if="drawerOpen" :total-price="totalPrice" :vat-price="vatPrice"/>
   <main class="w-4/5 m-auto bg-white rounded-xl shadow-xl mt-14">
-    <Header @open-drawer="openDrawer" />
+    <Header :total-price="totalPrice" @open-drawer="openDrawer" />
     <section class="p-10">
       <div class="flex justify-between items-center">
         <h2 class="text-3xl font-bold mb-8">Все кроссовки</h2>
@@ -140,7 +151,7 @@ provide('cartActions', { closeDrawer, openDrawer })
         :items="items"
         class="mt-3"
         @add-to-favorites="addTofavorites"
-        @add-to-cart="addToCart"
+        @add-to-cart="onClickAddPlus"
       />
     </section>
   </main>
