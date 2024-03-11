@@ -13,6 +13,12 @@ const totalPrice = computed(() => cart.value.reduce((sum, item) => sum + item.pr
 const vatPrice = computed(() => Math.round(totalPrice.value * 5) / 100)
 
 const drawerOpen = ref(false)
+const isCreatingOrder = ref(false)
+
+const filters = reactive({
+  sortBy: 'title',
+  searchQuery: ''
+})
 
 const closeDrawer = () => {
   drawerOpen.value = false
@@ -21,11 +27,6 @@ const closeDrawer = () => {
 const openDrawer = () => {
   drawerOpen.value = true
 }
-
-const filters = reactive({
-  sortBy: 'title',
-  searchQuery: ''
-})
 
 const onChangeSelect = (e) => {
   filters.sortBy = e.target.value
@@ -62,6 +63,22 @@ const addToCart = (item) => {
 const removeFromCart = (item) => {
   cart.value.splice(cart.value.indexOf(item), 1)
   item.isAdded = false
+}
+
+const createOrder = async () => {
+  try {
+    isCreatingOrder.value = true
+    const { data } = await axios.post('https://1af91ffe6c154bf5.mokky.dev/orders', {
+      items: cart.value,
+      totalPrice: totalPrice.value
+    })
+    cart.value = []
+    return data
+  } catch (e) {
+    console.log(e)
+  } finally {
+    isCreatingOrder.value = false
+  }
 }
 
 const onClickAddPlus = (item) => {
@@ -114,17 +131,33 @@ const fetchItems = async () => {
 }
 
 onMounted(async () => {
+  const localCart = localStorage.getItem('cart')
+  cart.value = localCart ? JSON.parse(localCart) : []
+
   await fetchItems()
   await fetchFavorites()
+
+  items.value = items.value.map((item) => ({
+    ...item,
+    isAdded: cart.value.some((cartItem) => cartItem.id === item.id)
+  }))
 })
 
 watch(filters, fetchItems)
+watch(cart, () => items.value.map((item) => (item.isAdded = false)))
+watch(cart, () => localStorage.setItem('cart', JSON.stringify(cart.value, 2)), { deep: true })
 
 provide('cart', { closeDrawer, openDrawer, cart, addToCart, removeFromCart })
 </script>
 
 <template>
-  <Drawer v-if="drawerOpen" :total-price="totalPrice" :vat-price="vatPrice"/>
+  <Drawer
+    v-if="drawerOpen"
+    :total-price="totalPrice"
+    :vat-price="vatPrice"
+    @create-order="createOrder"
+    :is-creating-order="isCreatingOrder"
+  />
   <main class="w-4/5 m-auto bg-white rounded-xl shadow-xl mt-14">
     <Header :total-price="totalPrice" @open-drawer="openDrawer" />
     <section class="p-10">
