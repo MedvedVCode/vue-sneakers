@@ -1,5 +1,5 @@
 <script setup>
-defineProps({
+const props  = defineProps({
 	id: Number,
   imageUrl: String,
   title: String,
@@ -17,6 +17,7 @@ defineProps({
     class="relative border border-slate-100 rounded-3xl p-8 cursor-pointer hover:-translate-y-2 transition hover:shadow-xl"
   >
     <img
+		v-if="props.onClickFavorite"
       :src="isFavorite ? '/like-2.svg' : '/like-1.svg'"
       alt="Like 1"
       class="absolute"
